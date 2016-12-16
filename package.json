@@ -1,0 +1,33 @@
+{
+  "name": "eslint-plugin-no-await-async-call",
+  "description": "Enforces that all calls to async functions within an async function is awaited.",
+  "version": "0.0.1",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --harmony_async_await test/no-await-async-call.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "babel-eslint": "^7.1.1",
+    "eslint": "^3.12.2"
+  },
+  "peerDependencies": {
+    "eslint": ">=0.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/christensson/eslint-plugin-no-await-async-call.git"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "async",
+    "await"
+  ],
+  "author": "Marcus Christensson",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/christensson/eslint-plugin-no-await-async-call/issues"
+  },
+  "homepage": "https://github.com/christensson/eslint-plugin-no-await-async-call#readme"
+}
