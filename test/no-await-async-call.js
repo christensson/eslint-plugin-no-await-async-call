@@ -22,7 +22,13 @@ ruleTester.run("no-await-async-call", rule, {
     { code: "async function f() {g();}; async function g() {await x}", errors },
     // async func f calls anonymous async func g without await (g declared before f)
     { code: "let g; g = async function() {await x}; async function f() {g();}", errors },
-    { code: "let g = async function() {await x}; async function f() {g();}", errors }
-    //code: "let f2 = async () => { await x }; let f = async () => { await f2()}",
+    { code: "let g = async function() {await x}; async function f() {g();}", errors },
+    // Same with arrow functions...
+    { code: "let g; g = async () => {await x}; async function f() {g();}", errors },
+    { code: "let g = async () => {await x}; async function f() {g();}", errors },
+    { code: "let g; g = async function() {await x}; async () => {g();}", errors },
+    { code: "let g = async function() {await x}; async () => {g();}", errors },
+    { code: "let g; g = async () => {await x}; async () => {g();}", errors },
+    { code: "let g = async () => {await x}; async () => {g();}", errors },
   ]
 });

@@ -37,7 +37,7 @@ module.exports = function(context) {
       let funcName;
       if (node.type === "FunctionDeclaration") {
         funcName = node.id.name;
-      } else if (node.type === "FunctionExpression") {
+      } else if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") {
         // Try to get function name...
         const parentType = node.parent ? node.parent.type : undefined;
         switch (parentType) {
