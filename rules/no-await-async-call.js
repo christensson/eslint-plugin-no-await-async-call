@@ -30,21 +30,41 @@ module.exports = function(context) {
 
   function onFunctionEnter(node) {
       const frame = {
-        isAsync: node.async
+        isAsync: node.async,
+        // TODO: Add funcPropMap here instead to handle scope...
       };
       stack.push(frame);
+      let funcName;
       if (node.type === "FunctionDeclaration") {
-        const functionName = node.id.name;
-        setFuncProp(functionName, PROP.ASYNC, node.async || false);
-        const reportNodeIfAsync = getFuncProp(functionName, PROP.REPORT_IF_ASYNC)
+        funcName = node.id.name;
+      } else if (node.type === "FunctionExpression") {
+        // Try to get function name...
+        const parentType = node.parent ? node.parent.type : undefined;
+        switch (parentType) {
+          case "AssignmentExpression":
+            if (node.parent.operator === "=" && node.parent.left.type === "Identifier") {
+              funcName = node.parent.left.name;
+            }
+            break;
+          case "VariableDeclarator":
+            if (node.parent.id.type === "Identifier") {
+              funcName = node.parent.id.name;
+            }
+            break;
+        }
+      } else if (node.type === "ArrowFunctionExpression") {
+        // TODO
+      }
+
+      if (funcName) {
+        setFuncProp(funcName, PROP.ASYNC, node.async || false);
+        const reportNodeIfAsync = getFuncProp(funcName, PROP.REPORT_IF_ASYNC)
         if (node.async && reportNodeIfAsync) {
           context.report({
             node: reportNodeIfAsync,
             message: "Call to async function without await",
           });
         }
-      } else if (node.type === "ArrowFunctionExpression") {
-        // TODO
       }
     }
 
