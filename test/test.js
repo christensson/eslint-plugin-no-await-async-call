@@ -10,10 +10,10 @@ function n2() {
 
 async function a2() {
   n1();
-  await a1();
+  a1();
 }
 
-async function a1() {
+var a1 = async function() {
   n1();
   n2();
 }
