@@ -8,22 +8,25 @@ const PROP = {
 module.exports = function(context) {
   const allowThrow = context.options[0] === "allow-throw";
   const stack = [];
-  // Map to store if:
-  // - PROP.ASYNC - Visited function declarations represent async functions
-  // - PROP.REPORT_IF_ASYNC - Visited function calls within an async function
-  // aren't awaited and thus shall report errors if later found out to be async.
-  const funcPropMap = {};
 
-  function setFuncProp(funcId, propName, value) {
-    if (!(funcId in funcPropMap)) {
-      funcPropMap[funcId] = {};
+  // Push root-frame...
+  stack.push({ funcProps: {} });
+
+  function setFuncProp(frame, funcId, propName, value) {
+    const props = frame.funcProps;
+    if (!(funcId in props)) {
+      props[funcId] = {};
     }
-    funcPropMap[funcId][propName] = value;
+    props[funcId][propName] = value;
   }
 
   function getFuncProp(funcId, propName) {
-    if (funcId in funcPropMap) {
-      return funcPropMap[funcId][propName];
+    // Go through stack and search backwards...
+    for (let i = stack.length - 1; i >= 0; --i) {
+      const props = stack[i].funcProps;
+      if (funcId in props) {
+        return props[funcId][propName];
+      }
     }
     return undefined;
   }
@@ -31,8 +34,13 @@ module.exports = function(context) {
   function onFunctionEnter(node) {
       const frame = {
         isAsync: node.async,
-        // TODO: Add funcPropMap here instead to handle scope...
+        // Map to store if:
+        // - PROP.ASYNC - Visited function declarations represent async functions
+        // - PROP.REPORT_IF_ASYNC - Visited function calls within an async function
+        // aren't awaited and thus shall report errors if later found out to be async.
+        funcProps: {}
       };
+      const callingFrame = stack[stack.length - 1];
       stack.push(frame);
       let funcName;
       if (node.type === "FunctionDeclaration") {
@@ -52,18 +60,18 @@ module.exports = function(context) {
             }
             break;
         }
-      } else if (node.type === "ArrowFunctionExpression") {
-        // TODO
       }
 
       if (funcName) {
-        setFuncProp(funcName, PROP.ASYNC, node.async || false);
-        const reportNodeIfAsync = getFuncProp(funcName, PROP.REPORT_IF_ASYNC)
-        if (node.async && reportNodeIfAsync) {
-          context.report({
-            node: reportNodeIfAsync,
-            message: "Call to async function without await",
-          });
+        setFuncProp(callingFrame, funcName, PROP.ASYNC, node.async || false);
+        if (node.async) {
+          const reportNodeIfAsync = getFuncProp(funcName, PROP.REPORT_IF_ASYNC)
+          if (reportNodeIfAsync) {
+            context.report({
+              node: reportNodeIfAsync,
+              message: "Call to async function without await",
+            });
+          }
         }
       }
     }
@@ -106,8 +114,9 @@ module.exports = function(context) {
           // That is called without await...
           const calledFuncIsAsync = getFuncProp(calledFunctionName, PROP.ASYNC);
           if (calledFuncIsAsync === undefined) {
+            const callingFrame = stack[stack.length - 2];
             // We don't know yet if called function is async...
-            setFuncProp(calledFunctionName, PROP.REPORT_IF_ASYNC, node);
+            setFuncProp(callingFrame, calledFunctionName, PROP.REPORT_IF_ASYNC, node);
           } else if (calledFuncIsAsync) {
             context.report({
               node: node,

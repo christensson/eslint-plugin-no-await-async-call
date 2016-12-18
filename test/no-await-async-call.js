@@ -30,5 +30,10 @@ ruleTester.run("no-await-async-call", rule, {
     { code: "let g = async function() {await x}; async () => {g();}", errors },
     { code: "let g; g = async () => {await x}; async () => {g();}", errors },
     { code: "let g = async () => {await x}; async () => {g();}", errors },
+    // Nested functions...
+    { code: "function parent() { let g = async () => {await x}; async () => {g();} }", errors },
+    { code: "let g = async () => {await x}; function parent() { async () => {g();} }", errors },
+    { code: "let g = async () => {await x}; function parent1() { function parent2() {async () => {g();} } }", errors },
+    //{ code: "let g; function parent() { async () => {g();} }; g = async () => {await x}", errors },
   ]
 });
