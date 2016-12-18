@@ -10,7 +10,7 @@ module.exports = function(context) {
   const stack = [];
 
   // Push root-frame...
-  stack.push({ funcProps: {} });
+  stack.push({ level: 0, funcProps: {}, rememberedChildProps: {} });
 
   function setFuncProp(frame, funcId, propName, value) {
     const props = frame.funcProps;
@@ -20,27 +20,56 @@ module.exports = function(context) {
     props[funcId][propName] = value;
   }
 
-  function getFuncProp(funcId, propName) {
+  function isFuncAsync(funcId) {
     // Go through stack and search backwards...
     for (let i = stack.length - 1; i >= 0; --i) {
       const props = stack[i].funcProps;
       if (funcId in props) {
-        return props[funcId][propName];
+        return props[funcId][PROP.ASYNC];
+      }
+    }
+    return undefined;
+  }
+
+  function isFuncFailedIfAsync(funcId) {
+    const checkProps = function(props, funcId) {
+      if ((funcId in props) && (PROP.REPORT_IF_ASYNC in props[funcId])) {
+        const reportIfAsync = props[funcId][PROP.REPORT_IF_ASYNC];
+        if (reportIfAsync) {
+          // Remove from props...
+          delete props[funcId][PROP.REPORT_IF_ASYNC];
+        }
+        return reportIfAsync;
+      }
+      return undefined;
+    };
+
+    // Go through stack and search backwards...
+    for (let i = stack.length - 1; i >= 0; --i) {
+      const frame = stack[i];
+      let reportIfAsync = checkProps(frame.funcProps, funcId);
+      if (reportIfAsync === undefined) {
+        reportIfAsync = checkProps(frame.rememberedChildProps, funcId);
+      }
+      if (reportIfAsync !== undefined) {
+        return reportIfAsync;
       }
     }
     return undefined;
   }
 
   function onFunctionEnter(node) {
+    const callingFrame = stack[stack.length - 1];
       const frame = {
+        level: callingFrame.level + 1,
         isAsync: node.async,
         // Map to store if:
         // - PROP.ASYNC - Visited function declarations represent async functions
         // - PROP.REPORT_IF_ASYNC - Visited function calls within an async function
         // aren't awaited and thus shall report errors if later found out to be async.
-        funcProps: {}
+        funcProps: {},
+        rememberedChildProps: {}
       };
-      const callingFrame = stack[stack.length - 1];
       stack.push(frame);
       let funcName;
       if (node.type === "FunctionDeclaration") {
@@ -65,7 +94,7 @@ module.exports = function(context) {
       if (funcName) {
         setFuncProp(callingFrame, funcName, PROP.ASYNC, node.async || false);
         if (node.async) {
-          const reportNodeIfAsync = getFuncProp(funcName, PROP.REPORT_IF_ASYNC)
+          const reportNodeIfAsync = isFuncFailedIfAsync(funcName);
           if (reportNodeIfAsync) {
             context.report({
               node: reportNodeIfAsync,
@@ -78,6 +107,16 @@ module.exports = function(context) {
 
     function onFunctionExit(node) {
       const frame = stack.pop();
+      const callingFrame = stack[stack.length - 1];
+      // Check funcProps if we shall save any...
+      const propsToRemember = {};
+      for (const funcName of Object.keys(frame.funcProps)) {
+        const props = frame.funcProps[funcName];
+        if (PROP.REPORT_IF_ASYNC in props) {
+          propsToRemember[funcName] = props;
+        }
+      }
+      Object.assign(callingFrame.rememberedChildProps, frame.rememberedChildProps, propsToRemember);
     }
 
   return {
@@ -112,7 +151,7 @@ module.exports = function(context) {
         const calledFunctionName = node.callee.name;
         if (!calledWithAwait) {
           // That is called without await...
-          const calledFuncIsAsync = getFuncProp(calledFunctionName, PROP.ASYNC);
+          const calledFuncIsAsync = isFuncAsync(calledFunctionName);
           if (calledFuncIsAsync === undefined) {
             const callingFrame = stack[stack.length - 2];
             // We don't know yet if called function is async...
