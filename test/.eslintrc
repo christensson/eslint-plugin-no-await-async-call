@@ -1,7 +1,0 @@
-{
-  "parser": "babel-eslint",
-  "plugins": ["no-await-async-call"],
-  "rules": {
-    "no-await-async-call/no-await-async-call": 2
-  }
-}

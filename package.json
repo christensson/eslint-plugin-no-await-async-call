@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "main": "src/index.js",
   "scripts": {
-    "test": "node --harmony_async_await test/no-await-async-call.js"
+    "test": "find test -name \\*.js -exec node --harmony_async_await {} \\;"
   },
   "dependencies": {},
   "devDependencies": {

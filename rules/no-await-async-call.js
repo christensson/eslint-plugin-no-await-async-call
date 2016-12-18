@@ -5,7 +5,7 @@ const PROP = {
   REPORT_IF_ASYNC: "report_if_async"
 };
 
-module.exports = function(context) {
+module.exports = function(context, assignmentRequired = false) {
   const allowThrow = context.options[0] === "allow-throw";
   const stack = [];
 
@@ -98,7 +98,7 @@ module.exports = function(context) {
           if (reportNodeIfAsync) {
             context.report({
               node: reportNodeIfAsync,
-              message: "Call to async function without await",
+              message: assignmentRequired ? "Call to async function without await on assignment" : "Call to async function without await",
             });
           }
         }
@@ -147,9 +147,10 @@ module.exports = function(context) {
       const frame = stack[stack.length - 1];
       if (frame.isAsync) {
         // We have a function call within an async function...
-        const calledWithAwait = node.parent && node.parent.type === "AwaitExpression";
+        const parentIsAwait = node.parent && node.parent.type === "AwaitExpression";
+        const parentIsAssign = node.parent && ([ "AssignmentExpression", "VariableDeclarator" ].indexOf(node.parent.type) !== -1);
         const calledFunctionName = node.callee.name;
-        if (!calledWithAwait) {
+        if (assignmentRequired ? parentIsAssign : !parentIsAwait) {
           // That is called without await...
           const calledFuncIsAsync = isFuncAsync(calledFunctionName);
           if (calledFuncIsAsync === undefined) {
@@ -159,7 +160,7 @@ module.exports = function(context) {
           } else if (calledFuncIsAsync) {
             context.report({
               node: node,
-              message: "Call to async function without await",
+              message: assignmentRequired ? "Call to async function without await on assignment" : "Call to async function without await",
             });
           }
         }
