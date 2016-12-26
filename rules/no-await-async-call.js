@@ -6,7 +6,6 @@ const PROP = {
 };
 
 module.exports = function(context, assignmentRequired = false) {
-  const allowThrow = context.options[0] === "allow-throw";
   const stack = [];
 
   // Push root-frame...
@@ -132,11 +131,6 @@ module.exports = function(context, assignmentRequired = false) {
     ArrowFunctionExpression: onFunctionEnter,
     "ArrowFunctionExpression:exit": onFunctionExit,
 
-    ThrowStatement(node) {
-      const frame = stack[stack.length - 1];
-      frame.foundThrow = true;
-    },
-
     YieldExpression(node) {
       // await nodes are YieldExpression"s with babel-eslint < 7.0.0
       const frame = stack[stack.length - 1];
@@ -168,9 +162,3 @@ module.exports = function(context, assignmentRequired = false) {
     }
   };
 };
-
-module.exports.schema = [
-  {
-    enum: ["allow-throw"],
-  },
-];

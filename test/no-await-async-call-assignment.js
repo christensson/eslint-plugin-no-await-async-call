@@ -12,7 +12,9 @@ const errors = [{type: "CallExpression", message: MESSAGE}];
 ruleTester.run("no-await-async-call-assignment", rule, {
   valid: [
     "function f() {g()}",
-    "async function g() {}; async function f() {await g()}",
+    "async function g() {}; async function f() {let x = await g()}",
+    "let g = async function () {}; async function f() {let x = await g()}",
+    "let g = function () {}; g = async function() {}; async function f() {let x = await g()}",
   ],
 
   invalid: [
@@ -30,6 +32,8 @@ ruleTester.run("no-await-async-call-assignment", rule, {
     { code: "let g = async function() {}; async () => {let x = g()}", errors },
     { code: "let g; g = async () => {}; async () => {let x = g()}", errors },
     { code: "let g = async () => {}; async () => {let x = g()}", errors },
+    // Function redfinition...
+    { code: "let g = () => {}; g = async () => {}; async () => {let x = g()}", errors },
     // Nested functions...
     { code: "function parent() { let g = async () => {}; async () => {let x = g()} }", errors },
     { code: "let g = async () => {}; function p() { async () => {let x = g()} }", errors },
