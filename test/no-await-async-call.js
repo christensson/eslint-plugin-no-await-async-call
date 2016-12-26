@@ -7,37 +7,43 @@ const RuleTester = require("eslint").RuleTester;
 const ruleTester = new RuleTester({ parser: "babel-eslint" });
 
 const MESSAGE = "Call to async function without await";
+const MESSAGE_ASSIGNMENT_REQUIRED = "Call to async function without await on assignment";
 const errors = [{type: "CallExpression", message: MESSAGE}];
+const errorsAssignmentRequired = [{type: "CallExpression", message: MESSAGE_ASSIGNMENT_REQUIRED}];
 
 ruleTester.run("no-await-async-call", rule, {
   valid: [
-    "function f() {g()}",
-    "async function g() {}; async function f() {await g()}",
-    "let g = async function () {}; async function f() {await g()}",
-    "let g = function () {}; g = async function() {}; async function f() {await g()}",
+    { code: "function f() {g()}", options: [] },
+    { code: "async function g() {}; async function f() {await g()}", options: [] },
+    { code: "let g = async function () {}; async function f() {await g()}", options: [] },
+    { code: "let g = function () {}; g = async function() {}; async function f() {await g()}", options: [] },
+    { code: "function f() {g()}", options: ["assignment-required"] },
+    { code: "async function g() {}; async function f() {let x = await g()}", options: ["assignment-required"] },
+    { code: "let g = async function () {}; async function f() {let x = await g()}", options: ["assignment-required"] },
+    { code: "let g = function () {}; g = async function() {}; async function f() {let x = await g()}", options: ["assignment-required"] },
   ],
 
   invalid: [
     // async func f calls async func g without await (g declared before f)
-    { code: "async function g() {}; async function f() {g()}", errors },
+    { code: "async function g() {}; async function f() {g()}", options: [], errors },
     // same, but g declared after f
-    { code: "async function f() {g()}; async function g() {}", errors },
+    { code: "async function f() {g()}; async function g() {}", options: [], errors },
     // async func f calls anonymous async func g without await (g declared before f)
-    { code: "let g; g = async function() {}; async function f() {g()}", errors },
-    { code: "let g = async function() {}; async function f() {g()}", errors },
+    { code: "let g; g = async function() {}; async function f() {g()}", options: [], errors },
+    { code: "let g = async function() {}; async function f() {g()}", options: [], errors },
     // Same with arrow functions...
-    { code: "let g; g = async () => {}; async function f() {g()}", errors },
-    { code: "let g = async () => {}; async function f() {g()}", errors },
-    { code: "let g; g = async function() {}; async () => {g()}", errors },
-    { code: "let g = async function() {}; async () => {g()}", errors },
-    { code: "let g; g = async () => {}; async () => {g()}", errors },
-    { code: "let g = async () => {}; async () => {g()}", errors },
+    { code: "let g; g = async () => {}; async function f() {g()}", options: [], errors },
+    { code: "let g = async () => {}; async function f() {g()}", options: [], errors },
+    { code: "let g; g = async function() {}; async () => {g()}", options: [], errors },
+    { code: "let g = async function() {}; async () => {g()}", options: [], errors },
+    { code: "let g; g = async () => {}; async () => {g()}", options: [], errors },
+    { code: "let g = async () => {}; async () => {g()}", options: [], errors },
     // Function redfinition...
-    { code: "let g = () => {}; g = async () => {}; async () => {g()}", errors },
+    { code: "let g = () => {}; g = async () => {}; async () => {g()}", options: [], errors },
     // Nested functions...
-    { code: "function parent() { let g = async () => {}; async () => {g()} }", errors },
-    { code: "let g = async () => {}; function p() { async () => {g()} }", errors },
-    { code: "let g = async () => {}; function p1() { function p2() {async () => {g()} } }", errors },
+    { code: "function parent() { let g = async () => {}; async () => {g()} }", options: [], errors },
+    { code: "let g = async () => {}; function p() { async () => {g()} }", options: [], errors },
+    { code: "let g = async () => {}; function p1() { function p2() {async () => {g()} } }", options: [], errors },
     { code: `let g;
       function p() {
         async () => {
@@ -45,6 +51,7 @@ ruleTester.run("no-await-async-call", rule, {
         }
       };
       g = async () => {await x}`,
+      options: [],
       errors
     },
     { code: `let g1; let g2;
@@ -58,7 +65,53 @@ ruleTester.run("no-await-async-call", rule, {
       };
       g1 = async () => {};
       g2 = async () => {}`,
+      options: [],
       errors: [{type: "CallExpression", message: MESSAGE}, {type: "CallExpression", message: MESSAGE}]
+    },
+
+    // async func f calls async func g without await (g declared before f)
+    { code: "async function g() {}; async function f() {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    // same, but g declared after f
+    { code: "async function f() {let x = g()}; async function g() {}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    // async func f calls anonymous async func g without await (g declared before f)
+    { code: "let g; g = async function() {}; async function f() {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g = async function() {}; async function f() {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    // Same with arrow functions...
+    { code: "let g; g = async () => {}; async function f() {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g = async () => {}; async function f() {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g; g = async function() {}; async () => {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g = async function() {}; async () => {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g; g = async () => {}; async () => {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g = async () => {}; async () => {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    // Function redfinition...
+    { code: "let g = () => {}; g = async () => {}; async () => {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    // Nested functions...
+    { code: "function parent() { let g = async () => {}; async () => {let x = g()} }", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g = async () => {}; function p() { async () => {let x = g()} }", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: "let g = async () => {}; function p1() { function p2() {async () => {let x = g()} } }", options: ["assignment-required"] , errors: errorsAssignmentRequired },
+    { code: `let g;
+      function p() {
+        async () => {
+          let x = g();
+        }
+      };
+      g = async () => {await x}`,
+      options: ["assignment-required"],
+      errors: errorsAssignmentRequired
+    },
+    { code: `let g1; let g2;
+      function p1() {
+        async function p2() {
+          async () => {
+            let x = g2();
+            let y = g1();
+          }
+        }
+      };
+      g1 = async () => {};
+      g2 = async () => {}`,
+      options: ["assignment-required"],
+      errors: [{type: "CallExpression", message: MESSAGE_ASSIGNMENT_REQUIRED}, {type: "CallExpression", message: MESSAGE_ASSIGNMENT_REQUIRED}]
     },
   ]
 });
