@@ -5,7 +5,8 @@ const PROP = {
   REPORT_IF_ASYNC: "report_if_async"
 };
 
-module.exports = function(context, assignmentRequired = false) {
+module.exports = function(context) {
+  const assignmentRequired = context.options[0] === "assignment-required";
   const stack = [];
 
   // Push root-frame...
@@ -162,3 +163,9 @@ module.exports = function(context, assignmentRequired = false) {
     }
   };
 };
+
+module.exports.schema = [
+  {
+    enum: ["assignment-required"],
+  },
+];
