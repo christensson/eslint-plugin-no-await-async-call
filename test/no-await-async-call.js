@@ -17,6 +17,7 @@ ruleTester.run("no-await-async-call", rule, {
     { code: "async function g() {}; async function f() {await g()}", options: [] },
     { code: "let g = async function () {}; async function f() {await g()}", options: [] },
     { code: "let g = function () {}; g = async function() {}; async function f() {await g()}", options: [] },
+    { code: "class A { async g() {} async f() {await this.g()} }", options: [] },
     { code: "function f() {g()}", options: ["assignment-required"] },
     { code: "async function g() {}; async function f() {let x = await g()}", options: ["assignment-required"] },
     { code: "let g = async function () {}; async function f() {let x = await g()}", options: ["assignment-required"] },
@@ -67,6 +68,16 @@ ruleTester.run("no-await-async-call", rule, {
       g2 = async () => {}`,
       options: [],
       errors: [{type: "CallExpression", message: MESSAGE}, {type: "CallExpression", message: MESSAGE}]
+    },
+    // ES6 classes
+    { code: `class A {
+        async f() {}
+        async g() {
+            this.f();
+        }
+      }`,
+      options: [],
+      errors
     },
 
     // async func f calls async func g without await (g declared before f)
