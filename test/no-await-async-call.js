@@ -79,6 +79,15 @@ ruleTester.run("no-await-async-call", rule, {
       options: [],
       errors
     },
+    { code: `class A {
+        static async f() {}
+        async g() {
+            A.f();
+        }
+      }`,
+      options: [],
+      errors
+    },
 
     // async func f calls async func g without await (g declared before f)
     { code: "async function g() {}; async function f() {let x = g()}", options: ["assignment-required"] , errors: errorsAssignmentRequired },

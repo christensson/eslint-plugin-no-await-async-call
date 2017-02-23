@@ -72,12 +72,25 @@ module.exports = function(context) {
       };
       stack.push(frame);
       let funcName;
+      let className;
       if (node.type === "FunctionDeclaration") {
         funcName = node.id.name;
       } else if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") {
         // Try to get function name...
         const parentType = node.parent ? node.parent.type : undefined;
         switch (parentType) {
+          case "MethodDefinition":
+            const methodName = node.parent.key.name;
+            if (node.parent.static) {
+              if (node.parent.parent.type === "ClassBody" &&
+                node.parent.parent.parent.type === "ClassDeclaration") {
+                className = node.parent.parent.parent.id.name;
+              }
+            } else {
+              className = "this";
+            }
+            funcName = methodName;
+            break;
           case "AssignmentExpression":
             if (node.parent.operator === "=" && node.parent.left.type === "Identifier") {
               funcName = node.parent.left.name;
@@ -92,7 +105,11 @@ module.exports = function(context) {
       }
 
       if (funcName) {
-        setFuncProp(callingFrame, funcName, PROP.ASYNC, node.async || false);
+        if (className) {
+          setFuncProp(callingFrame, className + "." + funcName, PROP.ASYNC, node.async || false);
+        } else {
+          setFuncProp(callingFrame, funcName, PROP.ASYNC, node.async || false);
+        }
         if (node.async) {
           const reportNodeIfAsync = isFuncFailedIfAsync(funcName);
           if (reportNodeIfAsync) {
@@ -144,8 +161,17 @@ module.exports = function(context) {
         // We have a function call within an async function...
         const parentIsAwait = node.parent && node.parent.type === "AwaitExpression";
         const parentIsAssign = node.parent && ([ "AssignmentExpression", "VariableDeclarator" ].indexOf(node.parent.type) !== -1);
-        const calledFunctionName = node.callee.name;
         if (assignmentRequired ? parentIsAssign : !parentIsAwait) {
+          let calledFunctionName = node.callee.name;
+          if (node.callee.type === "MemberExpression") {
+            let instName;
+            if (node.callee.object.type === "ThisExpression") {
+              instName = "this";
+            } else if (node.callee.object.type === "Identifier") {
+              instName = node.callee.object.name;
+            }
+            calledFunctionName = instName + "." + node.callee.property.name;
+          }
           // That is called without await...
           const calledFuncIsAsync = isFuncAsync(calledFunctionName);
           if (calledFuncIsAsync === undefined) {
